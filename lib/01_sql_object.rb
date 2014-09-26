@@ -80,18 +80,46 @@ class SQLObject
   end
 
   def attribute_values
-    # ...
+    attributes.values
   end
 
   def insert
-    # ...
+    col_names = attributes.keys.map(&:to_s).join(", ")
+    question_marks = (["?"] * attributes.keys.count).join(", ")
+
+    DBConnection.execute(<<-SQL, *attribute_values)
+    INSERT INTO
+      #{self.class.table_name} (#{col_names})
+    VALUES
+      (#{question_marks})
+    SQL
+
+    self.id = DBConnection.last_insert_row_id
   end
 
   def update
-    # ...
+    col_names = attributes.keys.map(&:to_s)
+    sets = []
+
+    col_names.count.times do |i|
+      sets << "#{col_names[i]} = ?"
+    end
+
+    DBConnection.execute(<<-SQL, *attribute_values, self.id)
+    UPDATE
+      #{self.class.table_name}
+    SET
+      #{sets.join(", ")}
+    WHERE
+      id = ?
+    SQL
   end
 
   def save
-    # ...
+    if self.id.nil?
+      self.insert
+    else
+      self.update
+    end
   end
 end
