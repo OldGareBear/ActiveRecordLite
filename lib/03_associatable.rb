@@ -85,9 +85,9 @@ module Associatable
   end
 
   def has_many(name, options = {})
-    options = HasManyOptions.new(name, options)
+    options = HasManyOptions.new(name,  options)
 
-    target_model = name.to_s.capitalize.constantize
+    target_model = name.to_s.capitalize.singularize.constantize
 
     foreign_key_column = options.options[:foreign_key]
 
