@@ -19,87 +19,66 @@ class AssocOptions
 end
 
 class BelongsToOptions < AssocOptions
-  attr_reader :name, :options
-
   def initialize(name, options = {})
-    @name = name
-    @options = options
-  end
+    defaults = {
+      :foreign_key => "#{name}_id".to_sym,
+      :class_name => name.to_s.camelcase,
+      :primary_key => :id
+    }
 
-  def class_name
-    return options[:class_name] if options.has_key?(:class_name)
-    name.to_s.capitalize.singularize
-  end
-
-  def foreign_key
-    return options[:foreign_key] if options.has_key?(:foreign_key)
-    "#{name}_id".to_sym
-  end
-
-  def primary_key
-    return options[:primary_key] if options.has_key?(:primary_key)
-    :id
+    defaults.keys.each do |key|
+      self.send("#{key}=", options[key] || defaults[key])
+    end
   end
 end
 
 class HasManyOptions < AssocOptions
-  attr_reader :self_class_name, :name, :options
-
   def initialize(name, self_class_name, options = {})
-    @name = name
-    @options = options
-    @self_class_name = self_class_name
-  end
+    defaults = {
+      :foreign_key => "#{self_class_name.underscore}_id".to_sym,
+      :class_name => name.to_s.singularize.camelcase,
+      :primary_key => :id
+    }
 
-  def class_name
-    return options[:class_name] if options.has_key?(:class_name)
-    name.to_s.capitalize.singularize
-  end
-
-  def foreign_key
-    return options[:foreign_key] if options.has_key?(:foreign_key)
-    "#{self_class_name.downcase}_id".to_sym
-  end
-
-  def primary_key
-    return options[:primary_key] if options.has_key?(:primary_key)
-    :id
+    defaults.keys.each do |key|
+      self.send("#{key}=", options[key] || defaults[key])
+    end
   end
 end
 
 module Associatable
   # Phase IIIb
   def belongs_to(name, options = {})
-
-    options = BelongsToOptions.new(name, options)
-
-    target_model = name.to_s.capitalize.constantize
-
-    foreign_key_column = options.options[:foreign_key]
+    self.assoc_options[name] = BelongsToOptions.new(name, options)
 
     define_method(name) do
-      foreign_key = self.send(foreign_key_column)
+      options = self.class.assoc_options[name]
 
-      target_model.where(primary_key: foreign_key)
+      key_val = self.send(options.foreign_key)
+      options
+        .model_class
+        .where(options.primary_key => key_val)
+        .first
     end
   end
 
   def has_many(name, options = {})
-    options = HasManyOptions.new(name,  options)
-
-    target_model = name.to_s.capitalize.singularize.constantize
-
-    foreign_key_column = options.options[:foreign_key]
+    self.assoc_options[name] =
+      HasManyOptions.new(name, self.name, options)
 
     define_method(name) do
-      foreign_key = self.send(foreign_key_column)
+      options = self.class.assoc_options[name]
 
-      target_model.where(primary_key: foreign_key)
+      key_val = self.send(options.primary_key)
+      options
+        .model_class
+        .where(options.foreign_key => key_val)
     end
   end
 
   def assoc_options
-    # Wait to implement this in Phase IVa. Modify `belongs_to`, too.
+    @assoc_options ||= {}
+    @assoc_options
   end
 end
 
