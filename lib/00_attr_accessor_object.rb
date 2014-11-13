@@ -11,12 +11,3 @@ class AttrAccessorObject
 
 end
 
-# I just need to make a method that will turn my_attr_accessor :monkey
-# into def monkey
-#         @monkey
-# =>   end
-
-# and  def monkey=(arg)
-# =>      @monkey = arg
-# =>   end
-
